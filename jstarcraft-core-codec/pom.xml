@@ -27,12 +27,27 @@
             <optional>true</optional>
         </dependency>
 
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-avro</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- BSON -->
+        <dependency>
+            <groupId>de.undercouch</groupId>
+            <artifactId>bson4jackson</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Hessian -->
         <dependency>
             <groupId>com.caucho</groupId>
             <artifactId>hessian</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <!-- HOCON -->
 
         <!-- Kryo -->
         <dependency>
@@ -55,12 +70,20 @@
             <optional>true</optional>
         </dependency>
 
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-protobuf</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Thrift -->
         <dependency>
             <groupId>org.apache.thrift</groupId>
             <artifactId>libthrift</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <!-- TOML -->
 
         <!-- XML -->
         <dependency>

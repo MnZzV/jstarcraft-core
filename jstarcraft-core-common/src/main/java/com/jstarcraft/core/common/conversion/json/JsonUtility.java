@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -25,7 +25,7 @@ import com.jstarcraft.core.utility.StringUtility;
 public class JsonUtility {
 
     /** 类型转换器(基于Jackson) */
-    private static final ObjectMapper TYPE_CONVERTER = new ObjectMapper();
+    private static final JsonMapper TYPE_CONVERTER = new JsonMapper();
 
     /** 类型工厂(基于Jackson) */
     private static final TypeFactory TYPE_FACTORY = TypeFactory.defaultInstance();
@@ -62,9 +62,6 @@ public class JsonUtility {
      * @return
      */
     public static String object2String(Object instance) {
-        if (instance == null) {
-            return null;
-        }
         try {
             return TYPE_CONVERTER.writeValueAsString(instance);
         } catch (Exception exception) {
@@ -74,16 +71,13 @@ public class JsonUtility {
     }
 
     /**
-     * 将JSON字符串转换为对象
+     * 将JSON字符串转换为任意实例
      * 
      * @param json
      * @param type
      * @return
      */
     public static <T> T string2Object(String json, Type type) {
-        if (StringUtility.isBlank(json)) {
-            return null;
-        }
         try {
             return (T) TYPE_CONVERTER.readValue(json, TYPE_FACTORY.constructType(type));
         } catch (Exception exception) {
@@ -92,26 +86,49 @@ public class JsonUtility {
         }
     }
 
+    /**
+     * Type转JavaType
+     * 
+     * <pre>
+     * TODO 准备转移到CodecUtility,TypeUtility或者JacksonUtility
+     * </pre>
+     * 
+     * @param type
+     * @return
+     */
     public static JavaType type2Java(Type type) {
         JavaType java = TYPE_FACTORY.constructType(type);
         return java;
     }
 
+    /**
+     * JavaType转Type
+     * 
+     * <pre>
+     * TODO 准备转移到CodecUtility,TypeUtility或者JacksonUtility
+     * </pre>
+     * 
+     * @param type
+     * @return
+     */
     public static Type java2Type(JavaType java) {
         Type type = null;
-        if (java.isArrayType()) {
-            // 数组类型
-            type = java.getRawClass();
-        } else if (java.hasGenericTypes()) {
-            // 泛型类型
-            List<JavaType> javas = java.getBindings().getTypeParameters();
-            Type[] generics = new Type[javas.size()];
-            int index = 0;
-            for (JavaType term : javas) {
-                generics[index++] = java2Type(term);
+        if (java.hasGenericTypes()) {
+            if (java.isArrayType()) {
+                // 数组类型
+                type = java2Type(java.getContentType());
+                type = TypeUtility.genericArrayType(type);
+            } else {
+                // 泛型类型
+                List<JavaType> javas = java.getBindings().getTypeParameters();
+                int size = javas.size();
+                Type[] generics = new Type[size];
+                for (int index = 0; index < size; index++) {
+                    generics[index] = java2Type(javas.get(index));
+                }
+                Class<?> clazz = java.getRawClass();
+                type = TypeUtility.parameterize(clazz, generics);
             }
-            Class<?> clazz = java.getRawClass();
-            type = TypeUtility.parameterize(clazz, generics);
         } else {
             type = java.getRawClass();
         }

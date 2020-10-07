@@ -45,72 +45,61 @@ public class MapConverter extends StandardConverter<Map<Object, Object>> {
         }
         if (mark == EXPLICIT_MARK) {
             int size = NumberConverter.readNumber(in).intValue();
-            // int code = NumberConverter.readNumber(in).intValue();
-            // definition = context.getClassDefinition(code);
-            Map map = (Map) definition.getInstance();
-            context.putMapValue(map);
-            StandardConverter converter = context.getProtocolConverter(Specification.TYPE);
-
-            // Type keyType = (Type) converter.readValueFrom(context,
-            // Type.class, null);
-            // Type valueType = (Type) converter.readValueFrom(context,
-            // Type.class, null);
-
+            Map instance = (Map) definition.getInstance();
+            context.putMapValue(instance);
+            StandardConverter converter = context.getStandardConverter(Specification.TYPE);
             ParameterizedType parameterizedType = (ParameterizedType) type;
             Type[] types = parameterizedType.getActualTypeArguments();
             Type keyType = types[0];
             Type valueType = types[1];
-
-            StandardConverter keyConverter = context.getProtocolConverter(Specification.getSpecification(keyType));
-            StandardConverter valueConverter = context.getProtocolConverter(Specification.getSpecification(valueType));
+            StandardConverter keyConverter = context.getStandardConverter(Specification.getSpecification(keyType));
+            StandardConverter valueConverter = context.getStandardConverter(Specification.getSpecification(valueType));
             ClassDefinition keyDefinition = context.getClassDefinition(TypeUtility.getRawType(keyType, null));
             ClassDefinition valueDefinition = context.getClassDefinition(TypeUtility.getRawType(valueType, null));
             for (int index = 0; index < size; index++) {
                 Object key = keyConverter.readValueFrom(context, keyType, keyDefinition);
                 Object value = valueConverter.readValueFrom(context, valueType, valueDefinition);
-                map.put(key, value);
+                instance.put(key, value);
             }
-            return map;
+            return instance;
         } else if (mark == IMPLICIT_MARK) {
             int size = NumberConverter.readNumber(in).intValue();
-            int code = NumberConverter.readNumber(in).intValue();
-            definition = context.getClassDefinition(code);
-            Map map = (Map) definition.getInstance();
-            context.putMapValue(map);
+            Map instance = (Map) definition.getInstance();
+            context.putMapValue(instance);
             for (int index = 0; index < size; index++) {
-                code = NumberConverter.readNumber(in).intValue();
+                int code = NumberConverter.readNumber(in).intValue();
                 definition = context.getClassDefinition(code);
                 Type keyType = definition.getType();
-                StandardConverter keyConverter = context.getProtocolConverter(definition.getSpecification());
+                StandardConverter keyConverter = context.getStandardConverter(definition.getSpecification());
                 code = NumberConverter.readNumber(in).intValue();
                 definition = context.getClassDefinition(code);
                 Type valueType = definition.getType();
-                StandardConverter valueConverter = context.getProtocolConverter(definition.getSpecification());
+                StandardConverter valueConverter = context.getStandardConverter(definition.getSpecification());
                 ClassDefinition keyDefinition = context.getClassDefinition(TypeUtility.getRawType(keyType, null));
                 ClassDefinition valueDefinition = context.getClassDefinition(TypeUtility.getRawType(valueType, null));
                 Object key = keyConverter.readValueFrom(context, keyType, keyDefinition);
                 Object value = valueConverter.readValueFrom(context, valueType, valueDefinition);
-                map.put(key, value);
+                instance.put(key, value);
             }
-            return map;
+            return instance;
         } else if (mark == REFERENCE_MARK) {
             int reference = NumberConverter.readNumber(in).intValue();
-            Map map = (Map) context.getMapValue(reference);
-            return map;
+            Map instance = (Map) context.getMapValue(reference);
+            return instance;
         }
         String message = StringUtility.format("类型码[{}]没有对应标记码[{}]", type, mark);
         throw new CodecConvertionException(message);
     }
 
     @Override
-    public void writeValueTo(StandardWriter context, Type type, ClassDefinition definition, Map<Object, Object> value) throws Exception {
+    public void writeValueTo(StandardWriter context, Type type, ClassDefinition definition, Map<Object, Object> instance) throws Exception {
         OutputStream out = context.getOutputStream();
         byte information = ClassDefinition.getMark(Specification.MAP);
-        if (value == null) {
+        if (instance == null) {
             out.write(information);
             return;
         }
-        int reference = context.getMapIndex(value);
+        int reference = context.getMapIndex(instance);
         if (reference != -1) {
             information |= REFERENCE_MARK;
             out.write(information);
@@ -118,44 +107,36 @@ public class MapConverter extends StandardConverter<Map<Object, Object>> {
         } else {
             if (type instanceof Class) {
                 information |= IMPLICIT_MARK;
-                context.putMapValue(value);
+                context.putMapValue(instance);
                 out.write(information);
-                int size = value.size();
+                int size = instance.size();
                 NumberConverter.writeNumber(out, size);
-                int code = definition.getCode();
-                NumberConverter.writeNumber(out, code);
-                for (Entry<Object, Object> keyValue : value.entrySet()) {
+                for (Entry<Object, Object> keyValue : instance.entrySet()) {
                     ClassDefinition keyDefinition = context.getClassDefinition(keyValue.getKey().getClass());
                     NumberConverter.writeNumber(out, keyDefinition.getCode());
-                    StandardConverter keyConverter = context.getProtocolConverter(keyDefinition.getSpecification());
+                    StandardConverter keyConverter = context.getStandardConverter(keyDefinition.getSpecification());
                     ClassDefinition valueDefinition = context.getClassDefinition(keyValue.getValue() == null ? void.class : keyValue.getValue().getClass());
                     NumberConverter.writeNumber(out, valueDefinition.getCode());
-                    StandardConverter valueConverter = context.getProtocolConverter(valueDefinition.getSpecification());
+                    StandardConverter valueConverter = context.getStandardConverter(valueDefinition.getSpecification());
                     keyConverter.writeValueTo(context, keyValue.getKey().getClass(), keyDefinition, keyValue.getKey());
                     valueConverter.writeValueTo(context, keyValue.getValue() == null ? void.class : keyValue.getValue().getClass(), valueDefinition, keyValue.getValue());
                 }
             } else {
                 information |= EXPLICIT_MARK;
-                context.putMapValue(value);
+                context.putMapValue(instance);
                 out.write(information);
-                int size = value.size();
+                int size = instance.size();
                 NumberConverter.writeNumber(out, size);
-                definition = context.getClassDefinition(value.getClass());
-                // int code = definition.getCode();
-                // NumberConverter.writeNumber(out, code);
+                definition = context.getClassDefinition(instance.getClass());
                 ParameterizedType parameterizedType = (ParameterizedType) type;
                 Type[] types = parameterizedType.getActualTypeArguments();
                 Type keyType = types[0];
                 Type valueType = types[1];
-                // ProtocolConverter converter =
-                // context.getProtocolConverter(CodecSpecification.TYPE);
-                // converter.writeValueTo(context, Type.class, null, keyType);
-                // converter.writeValueTo(context, Type.class, null, valueType);
-                StandardConverter keyConverter = context.getProtocolConverter(Specification.getSpecification(keyType));
-                StandardConverter valueConverter = context.getProtocolConverter(Specification.getSpecification(valueType));
+                StandardConverter keyConverter = context.getStandardConverter(Specification.getSpecification(keyType));
+                StandardConverter valueConverter = context.getStandardConverter(Specification.getSpecification(valueType));
                 ClassDefinition keyDefinition = context.getClassDefinition(TypeUtility.getRawType(keyType, null));
                 ClassDefinition valueDefinition = context.getClassDefinition(TypeUtility.getRawType(valueType, null));
-                for (Entry<Object, Object> keyValue : value.entrySet()) {
+                for (Entry<Object, Object> keyValue : instance.entrySet()) {
                     keyConverter.writeValueTo(context, keyType, keyDefinition, keyValue.getKey());
                     valueConverter.writeValueTo(context, valueType, valueDefinition, keyValue.getValue());
                 }
